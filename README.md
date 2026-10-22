@@ -71,17 +71,30 @@ S = clamp(sodium/900, .05, 1.6)
 
 ## 刷新真实数据
 
-```bash
-# Token 在 https://open.mcd.cn/mcp 申请（手机号登录 → 控制台 → 申请 MCP Token）
-MCD_MCP_TOKEN=你的token node tools/fetch-mcd.mjs
+首次运行下方命令会在项目根目录自动创建 `mcd.config.json`，并提示填写 token。
+也可以先复制 `mcd.config.example.json` 为 `mcd.config.json`。编辑配置文件：
 
-MCD_MCP_TOKEN=... node tools/fetch-mcd.mjs --dry        # 只看结果，不写文件
-MCD_MCP_TOKEN=... node tools/fetch-mcd.mjs --out d.json # 导出 JSON
+```json
+{
+  "MCD_MCP_TOKEN": "你的token"
+}
+```
+
+Token 在 https://open.mcd.cn/mcp 申请（手机号登录 → 控制台 → 申请 MCP Token）。
+保存配置后运行：
+
+```bash
+node tools/fetch-mcd.mjs
+
+node tools/fetch-mcd.mjs --dry        # 只看结果，不写文件
+node tools/fetch-mcd.mjs --out d.json # 导出 JSON
 ```
 
 脚本会走 `initialize → tools/call list-nutrition-foods`，解析 CSV 表格，
 替换 `index.html` 里 `/*MCD:START*/` 到 `/*MCD:END*/` 之间的数据块。
-Token 只从环境变量读取，**不会写进 HTML**。失败时游戏仍使用上一次注入的数据。
+Token 只从项目根目录的 `mcd.config.json` 读取，**不会写进 HTML**；该文件已被 Git 忽略，请勿将其公开或放入公开静态服务器目录。
+未填写 token 时，脚本会提示配置文件位置及申请地址并退出；配置格式错误时也会给出提示。
+直接打开游戏仍使用上一次注入的数据，无需 token。
 
 ## 实现说明（单文件，约 2000 行）
 

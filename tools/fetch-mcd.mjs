@@ -2,23 +2,38 @@
 /**
  * 从麦当劳中国 MCP 拉取真实餐品营养数据，并注入 index.html 的 MCD:START / MCD:END 标记块。
  *
- *   MCD_MCP_TOKEN=xxxx node tools/fetch-mcd.mjs
- *   MCD_MCP_TOKEN=xxxx node tools/fetch-mcd.mjs --dry      只打印，不写文件
- *   MCD_MCP_TOKEN=xxxx node tools/fetch-mcd.mjs --out data.json
+ *   node tools/fetch-mcd.mjs
+ *   node tools/fetch-mcd.mjs --dry      只打印，不写文件
+ *   node tools/fetch-mcd.mjs --out data.json
  *
- * Token 仅从环境变量读取，绝不写入 index.html。
+ * Token 从项目根目录 mcd.config.json 读取，绝不写入 index.html。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ENDPOINT = 'https://mcp.mcd.cn';
-const TOKEN = process.env.MCD_MCP_TOKEN;
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HTML = path.join(ROOT, 'index.html');
+const CONFIG = path.join(ROOT, 'mcd.config.json');
 
-if (!TOKEN) {
-  console.error('缺少 MCD_MCP_TOKEN 环境变量。申请地址: https://open.mcd.cn/mcp');
+let TOKEN;
+try {
+  if (!fs.existsSync(CONFIG)) {
+    fs.writeFileSync(CONFIG, JSON.stringify({ MCD_MCP_TOKEN: '' }, null, 2) + '\n', { flag: 'wx' });
+    console.error('已创建配置文件: ' + CONFIG);
+  }
+  // 兼容 Windows 编辑器保存的 UTF-8 BOM。
+  const config = JSON.parse(fs.readFileSync(CONFIG, 'utf8').replace(/^\uFEFF/, ''));
+  if (typeof config?.MCD_MCP_TOKEN !== 'string' || !config.MCD_MCP_TOKEN.trim()) {
+    console.error('尚未配置 MCP token，请编辑 ' + CONFIG + '，将 MCD_MCP_TOKEN 填为你的 token 后重新运行。');
+    console.error('Token 申请地址: https://open.mcd.cn/mcp');
+    process.exit(1);
+  }
+  TOKEN = config.MCD_MCP_TOKEN.trim();
+} catch (err) {
+  console.error('无法读取配置文件 ' + CONFIG + '：' +
+    (err instanceof SyntaxError ? 'JSON 格式错误，请参照 mcd.config.example.json 检查配置。' : '请检查文件是否可读写。'));
   process.exit(1);
 }
 
